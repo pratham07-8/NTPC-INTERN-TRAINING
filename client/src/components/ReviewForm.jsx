@@ -14,14 +14,17 @@ const ReviewRow = ({ label, value }) => (
 
 const ReviewForm = () => {
 
-    const { form, submitForm } = useForm()
+    const { form, submitForm, resetForm } = useForm()
     const navigate = useNavigate()
 
     const handleBack = () => navigate('/GuideDetails')
 
     const handleSubmit = async () => {
-
         const result = await submitForm();
+        if (result && result.success) {
+            resetForm();
+            navigate('/proposer-dashboard');
+        }
     }
 
     return (

@@ -37,9 +37,13 @@ export function FormProvider({ children }) {
     // Submit to backend
     const submitForm = async () => {
         try {
+            const token = localStorage.getItem('token');
             const res = await fetch('http://localhost:5000/Review', {
                 method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': token ? `Bearer ${token}` : ''
+                },
                 body:    JSON.stringify(form),
             })
             const data = await res.json()

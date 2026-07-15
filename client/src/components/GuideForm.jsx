@@ -3,6 +3,21 @@ import { useNavigate } from 'react-router-dom'
 import Navbar from './Navbar';
 import { useForm } from '../context/FormContext';
 
+const departments = [
+  'HR',
+  'Finance',
+  'Civil',
+  'Electrical',
+  'Mechanical',
+  'C&I',
+  'O&M',
+  'C&M',
+  'IT',
+  'Chemistry',
+  'Safety',
+  'Renewable Energy'
+];
+
 const GuideForm = () => {
 
     const {form,updateField} = useForm();
@@ -70,13 +85,18 @@ const GuideForm = () => {
         <label className="block text-sm font-semibold text-gray-700 mb-1">
           Department <span className="text-red-500">*</span>
         </label>
-        <input
-          type="text"
-          placeholder="e.g. HR-EB, Civil, Finance"
+        <select
           className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-300"
           value = {form.guideDepartment}
           onChange={(e) => updateField('guideDepartment',e.target.value)}
-        />
+        >
+          <option value="">Select Department</option>
+          {departments.map((dept) => (
+            <option key={dept} value={dept}>
+              {dept}
+            </option>
+          ))}
+        </select>
       </div>
 
 
