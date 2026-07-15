@@ -22,6 +22,9 @@ model User {
   name             String             @db.VarChar(100)
   role             Role
   department       String?            @db.VarChar(100)
+  is_verified      Boolean            @default(false)
+  otp              String?            @db.VarChar(10)
+  otp_expiry       DateTime?          @db.Timestamp(6)
   created_at       DateTime?          @default(now()) @db.Timestamp(6)
   training_request training_request[]
 }

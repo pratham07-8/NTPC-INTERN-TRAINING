@@ -39,12 +39,25 @@ export function AuthProvider({ children }) {
     try {
       const res = await axios.post('http://localhost:5000/auth/signup', { name, email, password, role, department });
       if (res.data.success) {
-        return { success: true };
+        return { success: true, otpRequired: res.data.otpRequired, email: res.data.email };
       }
       return { success: false, message: res.data.message || 'Registration failed' };
     } catch (err) {
       console.error(err);
       return { success: false, message: err.response?.data?.message || 'Registration failed' };
+    }
+  };
+
+  const verifyOtp = async (email, otp) => {
+    try {
+      const res = await axios.post('http://localhost:5000/auth/verify-otp', { email, otp });
+      if (res.data.success) {
+        return { success: true, message: res.data.message };
+      }
+      return { success: false, message: res.data.message || 'Verification failed' };
+    } catch (err) {
+      console.error(err);
+      return { success: false, message: err.response?.data?.message || 'Verification failed' };
     }
   };
 
@@ -56,7 +69,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, signup, verifyOtp, logout }}>
       {children}
     </AuthContext.Provider>
   );
