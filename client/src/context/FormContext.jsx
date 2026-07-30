@@ -3,18 +3,49 @@ import { useContext , createContext, useState} from "react";
 const FormContext = createContext();
 
 const INITIAL_FORM = {
+    salutation:       'Ms.',
+    traineeName:      '',
+    relationship:     '',
+    instituteName:    '',
+    departmentName:   '',
+    instituteAddress: '',
+    pincode:          '',
+    fromDate:         '',
+    toDate:           '',
+    areaOfTraining:   '',
+    guideName:        '',
+    guideSalutation:  'Ms.',
+    guideDesignation: '',
+    guideDepartment:  '',
+}
 
-    salutation:      'Ms.',
-    traineeName:     '',
-    relationship:    '',
-    instituteName:   '',
-    fromDate:        '',
-    toDate:          '',
-    areaOfTraining:  '',
-    guideName:       '',
-    guideSalutation: 'Ms.',
-    guideDesignation:'',
-    guideDepartment: '',
+export function isTraineeDetailsValid(form) {
+    if (!form) return false;
+    if (!form.traineeName || !form.traineeName.trim()) return false;
+    if (!form.relationship || !form.relationship.trim()) return false;
+    if (!form.instituteName || !form.instituteName.trim()) return false;
+    if (!form.instituteAddress || !form.instituteAddress.trim()) return false;
+    if (!form.pincode || !form.pincode.trim()) return false;
+    if (!form.fromDate) return false;
+    if (!form.toDate) return false;
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    if (form.fromDate < todayStr) return false;
+    if (form.toDate < form.fromDate) return false;
+    if (!form.areaOfTraining || !form.areaOfTraining.trim()) return false;
+    return true;
+}
+
+export function isGuideDetailsValid(form) {
+    if (!form) return false;
+    if (!form.guideName || !form.guideName.trim()) return false;
+    if (!form.guideDesignation || !form.guideDesignation.trim()) return false;
+    if (!form.guideDepartment || !form.guideDepartment.trim()) return false;
+    return true;
+}
+
+export function isFormValid(form) {
+    return isTraineeDetailsValid(form) && isGuideDetailsValid(form);
 }
 
 export function FormProvider({ children }) {
@@ -38,13 +69,28 @@ export function FormProvider({ children }) {
     const submitForm = async () => {
         try {
             const token = localStorage.getItem('token');
+
+            // Format full institute address header from structured fields
+            const fullInstitute = [
+                form.instituteName?.trim(),
+                form.departmentName?.trim(),
+                form.instituteAddress?.trim() && form.pincode?.trim()
+                    ? `${form.instituteAddress.trim()}-${form.pincode.trim()}`
+                    : (form.instituteAddress?.trim() || form.pincode?.trim())
+            ].filter(Boolean).join(',\n');
+
+            const payload = {
+                ...form,
+                instituteName: fullInstitute
+            };
+
             const res = await fetch('http://localhost:5000/Review', {
                 method:  'POST',
                 headers: { 
                     'Content-Type': 'application/json',
                     'Authorization': token ? `Bearer ${token}` : ''
                 },
-                body:    JSON.stringify(form),
+                body:    JSON.stringify(payload),
             })
             const data = await res.json()
 
@@ -52,7 +98,7 @@ export function FormProvider({ children }) {
                 setSubmitted(true)
                 return { success: true, requestId: data.requestId }
             } else {
-                return { success: false, message: data.message }
+                return { success: false, message: data.message || data.error || 'Failed to submit request. Please try again.' }
             }
         } catch (err) {
             console.error('Submit error:', err)
@@ -69,6 +115,9 @@ export function FormProvider({ children }) {
             setStep,
             submitForm,
             resetForm,
+            isTraineeDetailsValid: () => isTraineeDetailsValid(form),
+            isGuideDetailsValid: () => isGuideDetailsValid(form),
+            isFormValid: () => isFormValid(form),
         }}>
             {children}
         </FormContext.Provider>
@@ -77,4 +126,4 @@ export function FormProvider({ children }) {
 
 export function useForm() {
     return useContext(FormContext)
-}
+}

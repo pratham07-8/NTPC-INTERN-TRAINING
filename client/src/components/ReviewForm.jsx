@@ -1,7 +1,7 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from './Navbar'
-import { useForm } from '../context/FormContext'
+import { useForm, isTraineeDetailsValid, isGuideDetailsValid, isFormValid } from '../context/FormContext'
 
 const ReviewRow = ({ label, value }) => (
     <div className="flex border-b border-gray-100 py-3">
@@ -13,17 +13,38 @@ const ReviewRow = ({ label, value }) => (
 )
 
 const ReviewForm = () => {
-
-    const { form, submitForm, resetForm } = useForm()
+    const { form, submitForm, resetForm, submitted } = useForm()
     const navigate = useNavigate()
+    const [submitError, setSubmitError] = useState('')
+    const [submitting, setSubmitting] = useState(false)
+
+    useEffect(() => {
+        if (submitted) return;
+        if (!isTraineeDetailsValid(form)) {
+            navigate('/TraineeDetails');
+        } else if (!isGuideDetailsValid(form)) {
+            navigate('/GuideDetails');
+        }
+    }, [form, submitted, navigate]);
 
     const handleBack = () => navigate('/GuideDetails')
 
     const handleSubmit = async () => {
+        if (!isFormValid(form)) {
+            setSubmitError('Please ensure all required Trainee and Guide details are filled in before submitting.');
+            return;
+        }
+        setSubmitting(true);
+        setSubmitError('');
         const result = await submitForm();
+        setSubmitting(false);
         if (result && result.success) {
-            resetForm();
-            navigate('/proposer-dashboard');
+            navigate('/proposer-dashboard', { replace: true });
+            setTimeout(() => {
+                resetForm();
+            }, 100);
+        } else {
+            setSubmitError(result?.message || 'Failed to submit request. Please try again.');
         }
     }
 
@@ -36,13 +57,22 @@ const ReviewForm = () => {
                 Review & Submit
             </h2>
 
+            {submitError && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
+                    {submitError}
+                </div>
+            )}
+
             <p className="text-xs font-bold text-blue-800 uppercase tracking-widest mb-2">
                 Trainee Details
             </p>
             <div className="bg-gray-50 rounded-xl px-5 py-2 mb-6">
                 <ReviewRow label="Name"             value={`${form.salutation} ${form.traineeName}`} />
                 <ReviewRow label="Relationship"     value={form.relationship} />
-                <ReviewRow label="Institute"        value={form.instituteName} />
+                <ReviewRow label="Institute Name"   value={form.instituteName} />
+                {form.departmentName && <ReviewRow label="Department/School" value={form.departmentName} />}
+                <ReviewRow label="Campus Address"  value={form.instituteAddress} />
+                <ReviewRow label="Pincode"         value={form.pincode} />
                 <ReviewRow label="Training From"    value={form.fromDate} />
                 <ReviewRow label="Training To"      value={form.toDate} />
                 <ReviewRow label="Area of Training" value={form.areaOfTraining} />
@@ -66,9 +96,10 @@ const ReviewForm = () => {
                 </button>
                 <button
                     onClick={handleSubmit}
-                    className="bg-green-700 text-white px-8 py-2.5 rounded-lg text-sm font-semibold hover:bg-green-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={submitting || !isFormValid(form)}
+                    className="bg-green-700 text-white px-8 py-2.5 rounded-lg text-sm font-semibold hover:bg-green-800 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                    Submit
+                    {submitting ? 'Submitting...' : 'Submit'}
                 </button>
             </div>
 
@@ -77,4 +108,4 @@ const ReviewForm = () => {
     )
 }
 
-export default ReviewForm
+export default ReviewForm

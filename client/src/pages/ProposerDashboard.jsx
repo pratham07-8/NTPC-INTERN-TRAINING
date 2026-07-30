@@ -1,19 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useForm } from '../context/FormContext';
 import axios from 'axios';
 import WorkflowStepper from '../components/WorkflowStepper';
 import LOGO from '../assets/ntpc-logo.png';
 
 const ProposerDashboard = () => {
   const { user, token, logout } = useAuth();
+  const { resetForm } = useForm();
   const navigate = useNavigate();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedRequestId, setExpandedRequestId] = useState(null);
+  const [requestToDelete, setRequestToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [feedbackMsg, setFeedbackMsg] = useState('');
 
   const toggleRow = (id) => {
     setExpandedRequestId(expandedRequestId === id ? null : id);
+  };
+
+  const confirmDelete = async () => {
+    if (!requestToDelete) return;
+    setDeleting(true);
+    setFeedbackMsg('');
+    try {
+      const res = await axios.delete(`http://localhost:5000/Review/${requestToDelete.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        setRequests((prev) => prev.filter((r) => r.id !== requestToDelete.id));
+        if (expandedRequestId === requestToDelete.id) {
+          setExpandedRequestId(null);
+        }
+        setFeedbackMsg('Application deleted successfully!');
+        setTimeout(() => setFeedbackMsg(''), 4000);
+      }
+    } catch (err) {
+      console.error('Error deleting request', err);
+      setFeedbackMsg(err.response?.data?.message || 'Failed to delete application.');
+      setTimeout(() => setFeedbackMsg(''), 4000);
+    } finally {
+      setDeleting(false);
+      setRequestToDelete(null);
+    }
   };
 
   useEffect(() => {
@@ -82,13 +113,23 @@ const ProposerDashboard = () => {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-6 py-10">
+        {feedbackMsg && (
+          <div className="mb-6 p-4 bg-slate-800 text-white text-sm font-semibold rounded-2xl shadow-lg flex justify-between items-center">
+            <span>{feedbackMsg}</span>
+            <button onClick={() => setFeedbackMsg('')} className="text-slate-400 hover:text-white font-bold ml-4">✕</button>
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-800">Your Intern Requests</h1>
             <p className="text-sm text-slate-500 mt-1">Submit and track Trainee approval requests in real-time</p>
           </div>
           <button
-            onClick={() => navigate('/TraineeDetails')}
+            onClick={() => {
+              resetForm();
+              navigate('/TraineeDetails');
+            }}
             className="px-5 py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold rounded-xl tracking-wide shadow-lg shadow-orange-500/20 transform active:scale-95 transition"
           >
             + Create New Request
@@ -118,6 +159,7 @@ const ProposerDashboard = () => {
                   <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Status</th>
                   <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Remarks</th>
                   <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Date</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
@@ -147,11 +189,23 @@ const ProposerDashboard = () => {
                       <td className="px-6 py-4 text-slate-400 text-xs">
                         {new Date(request.submitted_at).toLocaleDateString()}
                       </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRequestToDelete(request);
+                          }}
+                          className="px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 hover:text-red-700 font-bold text-xs rounded-lg transition shadow-sm"
+                          title="Delete Application"
+                        >
+                          🗑️ Delete
+                        </button>
+                      </td>
                     </tr>
                     
                     {expandedRequestId === request.id && (
                       <tr className="bg-slate-50/50">
-                        <td colSpan={6} className="px-6 py-6 border-b border-slate-100">
+                        <td colSpan={7} className="px-6 py-6 border-b border-slate-100">
                           <div className="max-w-4xl mx-auto">
                             <WorkflowStepper status={request.status} theme="light" />
                             
@@ -170,10 +224,18 @@ const ProposerDashboard = () => {
                                 <p>Area of Training: {request.trainee?.area_of_training || 'General'}</p>
                                 <p>Dates: {new Date(request.trainee?.from_date).toLocaleDateString()} to {new Date(request.trainee?.to_date).toLocaleDateString()}</p>
                               </div>
-                              <div>
-                                <p className="font-semibold text-slate-700 mb-1">Assigned Guide Specs:</p>
-                                <p>Guide Designation: {request.guide?.designation}</p>
-                                <p>Guide Department: {request.guide?.department}</p>
+                              <div className="flex justify-between items-end">
+                                <div>
+                                  <p className="font-semibold text-slate-700 mb-1">Assigned Guide Specs:</p>
+                                  <p>Guide Designation: {request.guide?.designation}</p>
+                                  <p>Guide Department: {request.guide?.department}</p>
+                                </div>
+                                <button
+                                  onClick={() => setRequestToDelete(request)}
+                                  className="px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-bold text-xs rounded-lg transition"
+                                >
+                                  Delete Application
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -188,6 +250,48 @@ const ProposerDashboard = () => {
           </div>
         )}
       </main>
+
+      {/* Delete Confirmation Modal */}
+      {requestToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl animate-fade-in text-left">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
+              <h3 className="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+                <span>⚠️</span> Confirm Deletion
+              </h3>
+              <button
+                onClick={() => setRequestToDelete(null)}
+                className="text-slate-400 hover:text-slate-600 font-bold text-sm"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-sm text-slate-600 mb-4">
+              Are you sure you want to delete the application for{' '}
+              <strong className="text-slate-800">
+                {requestToDelete.trainee?.salutation} {requestToDelete.trainee?.full_name}
+              </strong>
+              ? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setRequestToDelete(null)}
+                disabled={deleting}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition shadow-md shadow-red-600/20 disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Delete Application'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -22,6 +22,8 @@ model User {
   name             String             @db.VarChar(100)
   role             Role
   department       String?            @db.VarChar(100)
+  designation      String?            @db.VarChar(100)
+  signature_url    String?            @db.Text
   is_verified      Boolean            @default(false)
   otp              String?            @db.VarChar(10)
   otp_expiry       DateTime?          @db.Timestamp(6)
@@ -32,7 +34,7 @@ model User {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model guide {
   id               Int                @id @default(autoincrement())
-  salutation       String             @db.VarChar(5)
+  salutation       String             @db.VarChar(20)
   full_name        String             @db.VarChar(100)
   designation      String             @db.VarChar(100)
   department       String             @db.VarChar(100)
@@ -43,10 +45,10 @@ model guide {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model trainee {
   id               Int                @id @default(autoincrement())
-  salutation       String             @db.VarChar(5)
+  salutation       String             @db.VarChar(20)
   full_name        String             @db.VarChar(100)
   relationship     String             @db.VarChar(20)
-  institute        String             @db.VarChar(100)
+  institute        String             @db.VarChar(500)
   from_date        DateTime           @db.Date
   to_date          DateTime           @db.Date
   area_of_training String?            @db.VarChar(150)
@@ -62,9 +64,11 @@ model training_request {
   proposer_id  Int?
   status       String?   @default("PENDING_GUIDE") @db.VarChar(50)
   remarks      String?   @db.Text
+  hr_signature String?   @db.Text
   submitted_at DateTime? @default(now()) @db.Timestamp(6)
   guide        guide     @relation(fields: [guide_id], references: [id], onUpdate: NoAction)
   trainee      trainee   @relation(fields: [trainee_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   proposer     User?     @relation(fields: [proposer_id], references: [id], onUpdate: NoAction)
 }
+
 
