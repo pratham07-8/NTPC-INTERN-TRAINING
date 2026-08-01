@@ -14,9 +14,16 @@ const Dashboard = () => {
   const [remarks, setRemarks] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [toastMessage, setToastMessage] = useState('');
   const [signature, setSignature] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Automatically reset inline error messages and remarks whenever selected request changes
+  useEffect(() => {
+    setMessage('');
+    setRemarks('');
+  }, [selectedRequest?.id]);
 
   const handleDeleteRequest = async () => {
     if (!selectedRequest) return;
@@ -27,7 +34,8 @@ const Dashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
-        setMessage('Application deleted successfully!');
+        setToastMessage('Application deleted successfully!');
+        setTimeout(() => setToastMessage(''), 5000);
         setShowDeleteModal(false);
         await fetchPendingRequests();
       }
@@ -94,6 +102,7 @@ const Dashboard = () => {
 
   const handleAction = async (action) => {
     if (!selectedRequest) return;
+    const currentTraineeName = `${selectedRequest.trainee?.salutation || ''} ${selectedRequest.trainee?.full_name || 'Application'}`.trim();
     setActionLoading(true);
     setMessage('');
     try {
@@ -103,7 +112,10 @@ const Dashboard = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (res.data.success) {
-        setMessage(`Request successfully ${action.toLowerCase()}d!`);
+        const actionVerb = action === 'APPROVE' ? (user?.role === 'HR_GM' ? 'approved & training letter issued' : 'approved & forwarded') : 'sent back';
+        setToastMessage(`Application for ${currentTraineeName} was successfully ${actionVerb}!`);
+        setTimeout(() => setToastMessage(''), 5000);
+        setMessage('');
         setRemarks('');
         setSignature('');
         // Refresh list
@@ -164,6 +176,20 @@ const Dashboard = () => {
         </div>
       </nav>
 
+      {/* Top Action Notification Toast */}
+      {toastMessage && (
+        <div className="max-w-7xl w-full mx-auto px-6 pt-4">
+          <div className="p-4 bg-emerald-600 text-white text-sm font-semibold rounded-2xl shadow-md flex justify-between items-center animate-fade-in">
+            <div className="flex items-center gap-2">
+              <span>{toastMessage}</span>
+            </div>
+            <button onClick={() => setToastMessage('')} className="text-emerald-200 hover:text-white font-bold text-xs ml-4">
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Container */}
       <div className="flex-1 max-w-7xl w-full mx-auto p-6 flex flex-col md:flex-row gap-6">
         {/* Left Side: Requests List */}
@@ -190,12 +216,15 @@ const Dashboard = () => {
               {requests.map((req) => (
                 <div
                   key={req.id}
-                  onClick={() => setSelectedRequest(req)}
-                  className={`p-4 rounded-2xl border transition cursor-pointer text-left ${
-                    selectedRequest?.id === req.id
+                  onClick={() => {
+                    setSelectedRequest(req);
+                    setMessage('');
+                    setRemarks('');
+                  }}
+                  className={`p-4 rounded-2xl border transition cursor-pointer text-left ${selectedRequest?.id === req.id
                       ? 'bg-orange-50/60 border-orange-400 shadow-sm'
                       : 'bg-slate-50/50 border-slate-200/80 hover:border-slate-300 hover:bg-slate-50'
-                  }`}
+                    }`}
                 >
                   <div className="flex justify-between items-start mb-1">
                     <span className="font-bold text-sm text-slate-800">

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NTPC Intern System — System Sequence Diagram</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --border: #1f2937;
+      --accent: #38bdf8;
+      --text: #f9fafb;
+      --text-sub: #9ca3af;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 30px 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .top-bar h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .btn-primary {
+      background: #0284c7;
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: #0369a1;
+    }
+
+    .btn-secondary {
+      background: #374151;
+      color: #f3f4f6;
+    }
+
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .mermaid-wrapper {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 8px;
+      overflow-x: auto;
+      display: block;
+    }
+
+    /* Force sequence diagram to take full width and large readable fonts */
+    .mermaid svg {
+      width: 100% !important;
+      min-width: 1100px !important;
+      height: auto !important;
+      font-family: 'Inter', sans-serif !important;
+    }
+
+    .mermaid .actor {
+      font-size: 14px !important;
+      font-weight: 700 !important;
+      fill: #0f172a !important;
+      stroke: #0284c7 !important;
+    }
+
+    .mermaid .messageText {
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      fill: #1e293b !important;
+    }
+
+    /* Print styling to export readable PDF */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+      }
+
+      .top-bar {
+        display: none !important;
+      }
+
+      .card {
+        background: #ffffff !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+      }
+
+      .mermaid-wrapper {
+        padding: 0 !important;
+        border: none !important;
+      }
+
+      .mermaid svg {
+        min-width: 100% !important;
+        width: 100% !important;
+      }
+
+      @page {
+        size: landscape;
+        margin: 10mm;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <div>
+        <h1>NTPC Intern System — Sequence Diagram</h1>
+        <p style="color: var(--text-sub); font-size: 0.9rem;">End-to-End API, Database, PDF, and Email Execution Flow</p>
+      </div>
+      <div class="btn-group">
+        <a href="ntpc_flowchart.html" class="btn btn-secondary">
+          ⬅ View Flowchart Page
+        </a>
+        <button onclick="window.print()" class="btn btn-primary">
+          🖨️ Download / Save as PDF
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="mermaid-wrapper">
+        <div class="mermaid">
+          sequenceDiagram
+              autonumber
+              actor Proposer as Proposer (Employee)
+              actor Guide as Assigned Guide
+              actor DeptGM as Dept Head (GM)
+              actor TO as Training Officer
+              actor HR as HR Head (GM)
+              participant API as Express REST API
+              participant DB as PostgreSQL (Prisma)
+              participant PDF as PDFKit Generator
+              participant Mail as Nodemailer
+
+              Proposer->>API: 1. POST /Review (Submit Request)
+              API->>DB: 2. Save Request (Status: PENDING_GUIDE)
+
+              Guide->>API: 3. Approve Request
+              API->>DB: 4. Update Status (PENDING_GGM)
+
+              DeptGM->>API: 5. Approve Request (Dept Match)
+              API->>DB: 6. Update Status (PENDING_TO)
+
+              TO->>API: 7. Approve Request
+              API->>DB: 8. Update Status (PENDING_HR)
+
+              HR->>API: 9. Approve & Attach Digital Signature
+              API->>DB: 10. Update Status (APPROVED)
+
+              API->>PDF: 11. Generate PDF Training Letter
+              PDF-->>API: 12. Return PDF Document Buffer
+
+              API->>Mail: 13. Send Email with PDF Attachment
+              Mail-->>Proposer: 14. Receive Approved Training Permission Letter
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      securityLevel: 'loose',
+      sequence: {
+        useMaxWidth: false,
+        showSequenceNumbers: true,
+        actorMargin: 70,
+        boxMargin: 15,
+        messageMargin: 45,
+        noteMargin: 15
+      }
+    });
+  </script>
+</body>
+
+</html>

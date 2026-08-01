@@ -1,5 +1,11 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -175,7 +181,10 @@ export const sendTrainingLetterEmail = async (toEmails, trainee, guide, pdfBuffe
   const guideDept = guide.department || 'IT';
 
   const proposerText = proposer ? `${proposer.name}, ${proposer.department || 'IT'}.` : 'As requested.';
-  const hrName = hrUser?.name || 'Dr. Nidhi Saini Gupta';
+  const rawHrName = hrUser?.name;
+  const hrName = (rawHrName && !rawHrName.toLowerCase().includes('nidhi') && rawHrName.toUpperCase() !== 'HR') 
+    ? rawHrName 
+    : 'HR SIGNATURE';
   const hrDesignation = hrUser?.designation || 'Senior Manager-HR';
 
   let hrSignatureHtml = '';
@@ -183,7 +192,26 @@ export const sendTrainingLetterEmail = async (toEmails, trainee, guide, pdfBuffe
   if (sigSource && sigSource.startsWith('data:image')) {
     hrSignatureHtml = `<div style="margin: 5px 0;"><img src="${sigSource}" alt="HR Signature" style="height: 45px; max-width: 140px; object-contain: contain;" /></div>`;
   } else {
-    hrSignatureHtml = `<div style="margin: 5px 0; font-family: 'Courier New', monospace; color: #2563eb; font-size: 13px; font-weight: bold; font-style: italic;">~ Dr. Nidhi Saini Gupta ~</div>`;
+    hrSignatureHtml = `<div style="margin: 5px 0; font-family: 'Courier New', monospace; color: #2563eb; font-size: 13px; font-weight: bold; font-style: italic;">~ HR SIGNATURE ~</div>`;
+  }
+
+  // Load NTPC logo as Base64 for HTML email header
+  let logoBase64Html = '';
+  const possibleLogoPaths = [
+    path.join(__dirname, '../assets/ntpc-logo.png'),
+    path.join(__dirname, '../../client/src/assets/ntpc-logo.png'),
+    path.join(__dirname, '../../client/public/ntpc-logo.png'),
+    path.resolve('server/assets/ntpc-logo.png'),
+    path.resolve('assets/ntpc-logo.png')
+  ];
+  for (const p of possibleLogoPaths) {
+    if (fs.existsSync(p)) {
+      try {
+        const buf = fs.readFileSync(p);
+        logoBase64Html = `data:image/png;base64,${buf.toString('base64')}`;
+        break;
+      } catch (e) {}
+    }
   }
 
   const html = `
@@ -191,7 +219,7 @@ export const sendTrainingLetterEmail = async (toEmails, trainee, guide, pdfBuffe
       
       <!-- Header Logo & Maharatan Tag -->
       <div style="margin-bottom: 25px;">
-        <div style="font-size: 26px; font-weight: bold; color: #002060; font-family: Arial, sans-serif; letter-spacing: 1px;">NTPC</div>
+        ${logoBase64Html ? `<img src="${logoBase64Html}" alt="NTPC Logo" style="height: 52px; width: auto; display: block; margin-bottom: 4px;" />` : `<div style="font-size: 26px; font-weight: bold; color: #002060; font-family: Arial, sans-serif; letter-spacing: 1px;">NTPC</div>`}
         <div style="font-size: 10.5px; color: #64748b; font-family: Arial, sans-serif; margin-top: 2px;">A Maharatan Company</div>
       </div>
 

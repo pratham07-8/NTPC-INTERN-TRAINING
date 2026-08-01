@@ -1,6 +1,10 @@
 import PDFDocument from 'pdfkit';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Generates a professional training letter PDF matching the official NTPC template format
@@ -28,24 +32,37 @@ export const generateTrainingLetterPDF = (trainee, guide, proposer, hrUser = nul
 
     // --- Header / Logo ---
     let logoDrawn = false;
-    try {
-      // Resolve path to standard NTPC logo from client assets
-      const logoPath = path.resolve('../client/src/assets/ntpc-logo.png');
+    const possibleLogoPaths = [
+      path.join(__dirname, '../assets/ntpc-logo.png'),
+      path.join(__dirname, '../../client/src/assets/ntpc-logo.png'),
+      path.join(__dirname, '../../client/public/ntpc-logo.png'),
+      path.resolve('server/assets/ntpc-logo.png'),
+      path.resolve('assets/ntpc-logo.png'),
+      path.resolve('../server/assets/ntpc-logo.png'),
+      path.resolve('NTPC-Intern-Project2/server/assets/ntpc-logo.png'),
+      path.resolve('client/public/ntpc-logo.png')
+    ];
+
+    for (const logoPath of possibleLogoPaths) {
       if (fs.existsSync(logoPath)) {
-        doc.image(logoPath, 54, 40, { width: 75 });
-        logoDrawn = true;
+        try {
+          const logoBuffer = fs.readFileSync(logoPath);
+          doc.image(logoBuffer, 54, 30, { width: 100 });
+          logoDrawn = true;
+          break;
+        } catch (e) {
+          console.error("Error drawing logo in PDF:", e);
+        }
       }
-    } catch (e) {
-      console.error("Error drawing logo in PDF:", e);
     }
     
     if (!logoDrawn) {
       // Fallback logo placeholder
-      doc.rect(54, 40, 75, 28).lineWidth(1.5).strokeColor('#002060').stroke();
-      doc.fontSize(10).font('Helvetica-Bold').fillColor('#002060').text('NTPC', 74, 49);
+      doc.rect(54, 30, 100, 36).lineWidth(1.5).strokeColor('#002060').stroke();
+      doc.fontSize(12).font('Helvetica-Bold').fillColor('#002060').text('NTPC', 82, 42);
     }
     
-    doc.fillColor('#64748b').fontSize(8.5).font('Helvetica').text('A Maharatan Company', 54, 76);
+    doc.fillColor('#64748b').fontSize(8.5).font('Helvetica').text('A Maharatan Company', 54, 84);
     
     // --- Ref No & Date ---
     const formatDateDot = (date) => {
@@ -187,7 +204,10 @@ export const generateTrainingLetterPDF = (trainee, guide, proposer, hrUser = nul
     doc.y = sigY + 46;
     
     // HR Signatory Name & Designation
-    const hrName = hrUser?.name || 'Dr. Nidhi Saini Gupta';
+    const rawHrName = hrUser?.name;
+    const hrName = (rawHrName && !rawHrName.toLowerCase().includes('nidhi') && rawHrName.toUpperCase() !== 'HR') 
+      ? rawHrName 
+      : 'HR SIGNATURE';
     const hrDesignation = hrUser?.designation || 'Senior Manager-HR';
     
     doc.moveDown(0.7);
