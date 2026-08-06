@@ -18,7 +18,7 @@ const sendViaMailtrap = async ({ to, subject, html, attachments = [] }) => {
   try {
     const toList = Array.isArray(to) ? to : to.split(',').map(e => e.trim());
     const formattedTo = toList.filter(Boolean).map(email => ({ email }));
-    
+
     const formattedAttachments = attachments.map(att => ({
       content: Buffer.isBuffer(att.content) ? att.content.toString('base64') : att.content,
       filename: att.filename,
@@ -182,8 +182,8 @@ export const sendTrainingLetterEmail = async (toEmails, trainee, guide, pdfBuffe
 
   const proposerText = proposer ? `${proposer.name}, ${proposer.department || 'IT'}.` : 'As requested.';
   const rawHrName = hrUser?.name;
-  const hrName = (rawHrName && !rawHrName.toLowerCase().includes('nidhi') && rawHrName.toUpperCase() !== 'HR') 
-    ? rawHrName 
+  const hrName = (rawHrName && !rawHrName.toLowerCase().includes('nidhi') && rawHrName.toUpperCase() !== 'HR')
+    ? rawHrName
     : 'HR SIGNATURE';
   const hrDesignation = hrUser?.designation || 'Senior Manager-HR';
 
@@ -210,7 +210,7 @@ export const sendTrainingLetterEmail = async (toEmails, trainee, guide, pdfBuffe
         const buf = fs.readFileSync(p);
         logoBase64Html = `data:image/png;base64,${buf.toString('base64')}`;
         break;
-      } catch (e) {}
+      } catch (e) { }
     }
   }
 
