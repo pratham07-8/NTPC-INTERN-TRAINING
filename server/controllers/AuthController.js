@@ -68,8 +68,8 @@ export const signup = async (req, res) => {
       });
     }
 
-    // Send OTP Email
-    await sendOTPEmail(email, otp, name);
+    // Send OTP Email asynchronously without blocking HTTP response
+    sendOTPEmail(email, otp, name).catch((err) => console.error('[EMAIL ERROR]', err));
 
     return res.status(200).json({
       success: true,
