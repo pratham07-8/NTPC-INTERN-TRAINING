@@ -9,6 +9,50 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
+// Helper to send email via Resend API (HTTP API - 100% reliable on cloud platforms)
+const sendViaResend = async ({ to, subject, html, attachments = [] }) => {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const toList = Array.isArray(to) ? to : [to];
+    const payload = {
+      from: process.env.RESEND_FROM || 'NTPC Portal <onboarding@resend.dev>',
+      to: toList,
+      subject,
+      html,
+    };
+
+    if (attachments && attachments.length > 0) {
+      payload.attachments = attachments.map(att => ({
+        filename: att.filename,
+        content: Buffer.isBuffer(att.content) ? att.content.toString('base64') : att.content
+      }));
+    }
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+    if (response.ok && data.id) {
+      console.log(`[RESEND API] Email successfully delivered to ${toList.join(', ')}. ID: ${data.id}`);
+      return { success: true, messageId: data.id };
+    } else {
+      console.error('[RESEND API ERROR]', data);
+      return null;
+    }
+  } catch (err) {
+    console.error('[RESEND API EXCEPTION]', err);
+    return null;
+  }
+};
+
 // Helper to send email via Mailtrap Sandbox API
 const sendViaMailtrap = async ({ to, subject, html, attachments = [] }) => {
   const token = process.env.MAILTRAP_TOKEN;
@@ -18,7 +62,7 @@ const sendViaMailtrap = async ({ to, subject, html, attachments = [] }) => {
   try {
     const toList = Array.isArray(to) ? to : to.split(',').map(e => e.trim());
     const formattedTo = toList.filter(Boolean).map(email => ({ email }));
-
+    
     const formattedAttachments = attachments.map(att => ({
       content: Buffer.isBuffer(att.content) ? att.content.toString('base64') : att.content,
       filename: att.filename,
@@ -121,15 +165,21 @@ export const sendOTPEmail = async (toEmail, otp, name) => {
     </div>
   `;
 
-  // Try Mailtrap API first if credentials are in .env
+  // 1. Try Resend API first (if RESEND_API_KEY is present)
+  const resendResult = await sendViaResend({ to: toEmail, subject, html });
+  if (resendResult && resendResult.success) {
+    return resendResult;
+  }
+
+  // 2. Try Mailtrap API next (if MAILTRAP_TOKEN is present)
   const mailtrapResult = await sendViaMailtrap({ to: toEmail, subject, html });
   if (mailtrapResult && mailtrapResult.success) {
     return mailtrapResult;
   }
 
-  // Fallback to Nodemailer Transporter
+  // 3. Fallback to Nodemailer Transporter
   const transporter = createTransporter();
-  const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER || 'no-reply@ntpc.co.in';
+  const fromEmail = process.env.SMTP_USER || process.env.SMTP_FROM || 'no-reply@ntpc.co.in';
 
   if (!transporter) {
     console.log('\n==================================================');
@@ -141,7 +191,7 @@ export const sendOTPEmail = async (toEmail, otp, name) => {
 
   try {
     const info = await transporter.sendMail({
-      from: `"NTPC Intern Portal" <${fromEmail}>`,
+      from: fromEmail,
       to: toEmail,
       subject,
       html,
@@ -327,15 +377,21 @@ export const sendTrainingLetterEmail = async (toEmails, trainee, guide, pdfBuffe
     }
   ];
 
-  // Try Mailtrap API first if credentials are in .env
+  // 1. Try Resend API first if credentials are in .env
+  const resendResult = await sendViaResend({ to: toEmails, subject, html, attachments });
+  if (resendResult && resendResult.success) {
+    return resendResult;
+  }
+
+  // 2. Try Mailtrap API next if credentials are in .env
   const mailtrapResult = await sendViaMailtrap({ to: toEmails, subject, html, attachments });
   if (mailtrapResult && mailtrapResult.success) {
     return mailtrapResult;
   }
 
-  // Fallback to Nodemailer Transporter
+  // 3. Fallback to Nodemailer Transporter
   const transporter = createTransporter();
-  const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER || 'no-reply@ntpc.co.in';
+  const fromEmail = process.env.SMTP_USER || process.env.SMTP_FROM || 'no-reply@ntpc.co.in';
 
   if (!transporter) {
     console.log('\n==================================================');
