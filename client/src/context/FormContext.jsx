@@ -1,4 +1,5 @@
 import { useContext , createContext, useState} from "react";
+import { API_BASE_URL } from "../config";
 
 const FormContext = createContext();
 
@@ -84,7 +85,7 @@ export function FormProvider({ children }) {
                 instituteName: fullInstitute
             };
 
-            const res = await fetch('http://localhost:5000/Review', {
+            const res = await fetch(`${API_BASE_URL}/Review`, {
                 method:  'POST',
                 headers: { 
                     'Content-Type': 'application/json',

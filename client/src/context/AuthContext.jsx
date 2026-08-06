@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 const AuthContext = createContext();
 
@@ -20,7 +21,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      const res = await axios.post('http://localhost:5000/auth/login', { email, password });
+      const res = await axios.post(`${API_BASE_URL}/auth/login`, { email, password });
       if (res.data.success) {
         setToken(res.data.token);
         setUser(res.data.user);
@@ -37,7 +38,7 @@ export function AuthProvider({ children }) {
 
   const signup = async (name, email, password, role, department = null) => {
     try {
-      const res = await axios.post('http://localhost:5000/auth/signup', { name, email, password, role, department });
+      const res = await axios.post(`${API_BASE_URL}/auth/signup`, { name, email, password, role, department });
       if (res.data.success) {
         return { success: true, otpRequired: res.data.otpRequired, email: res.data.email };
       }
@@ -50,7 +51,7 @@ export function AuthProvider({ children }) {
 
   const verifyOtp = async (email, otp) => {
     try {
-      const res = await axios.post('http://localhost:5000/auth/verify-otp', { email, otp });
+      const res = await axios.post(`${API_BASE_URL}/auth/verify-otp`, { email, otp });
       if (res.data.success) {
         return { success: true, message: res.data.message };
       }

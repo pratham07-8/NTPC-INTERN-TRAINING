@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 import WorkflowStepper from '../components/WorkflowStepper';
 import LOGO from '../assets/ntpc-logo.png';
 
@@ -30,7 +31,7 @@ const Dashboard = () => {
     setDeleting(true);
     setMessage('');
     try {
-      const res = await axios.delete(`http://localhost:5000/Review/${selectedRequest.id}`, {
+      const res = await axios.delete(`${API_BASE_URL}/Review/${selectedRequest.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -78,7 +79,7 @@ const Dashboard = () => {
   const fetchPendingRequests = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:5000/Review', {
+      const res = await axios.get(`${API_BASE_URL}/Review`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -107,7 +108,7 @@ const Dashboard = () => {
     setMessage('');
     try {
       const res = await axios.post(
-        `http://localhost:5000/Review/${selectedRequest.id}/action`,
+        `${API_BASE_URL}/Review/${selectedRequest.id}/action`,
         { action, remarks, signature: user?.role === 'HR_GM' ? signature : undefined },
         { headers: { Authorization: `Bearer ${token}` } }
       );

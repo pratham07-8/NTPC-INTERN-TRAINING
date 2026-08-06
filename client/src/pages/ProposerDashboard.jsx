@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useForm } from '../context/FormContext';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 import WorkflowStepper from '../components/WorkflowStepper';
 import LOGO from '../assets/ntpc-logo.png';
 
@@ -26,7 +27,7 @@ const ProposerDashboard = () => {
     setDeleting(true);
     setFeedbackMsg('');
     try {
-      const res = await axios.delete(`http://localhost:5000/Review/${requestToDelete.id}`, {
+      const res = await axios.delete(`${API_BASE_URL}/Review/${requestToDelete.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -50,7 +51,7 @@ const ProposerDashboard = () => {
   useEffect(() => {
     const fetchRequests = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/Review', {
+        const res = await axios.get(`${API_BASE_URL}/Review`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.data.success) {
