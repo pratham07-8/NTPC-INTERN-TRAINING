@@ -57,23 +57,38 @@ const sendViaMailtrap = async ({ to, subject, html, attachments = [] }) => {
 
 // Create standard Nodemailer transporter
 const createTransporter = () => {
-  const host = process.env.SMTP_HOST;
+  const host = process.env.SMTP_HOST ? process.env.SMTP_HOST.trim() : '';
   const port = process.env.SMTP_PORT || 587;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const user = process.env.SMTP_USER ? process.env.SMTP_USER.trim() : '';
+  // Remove any spaces from Google App Password if pasted with spaces (e.g. "abcd efgh ijkl mnop")
+  const pass = process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, '') : '';
 
-  if (!host || !user || !pass || user.includes('your-email')) {
+  if (!user || !pass || user.includes('your-email')) {
     return null;
+  }
+
+  // If host is Gmail or not set, use built-in 'gmail' service for optimum cloud compatibility
+  if (!host || host.includes('gmail')) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user, pass },
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 5000,
+    });
   }
 
   return nodemailer.createTransport({
     host,
     port: parseInt(port),
-    secure: port == 465,
+    secure: parseInt(port) === 465,
     auth: {
       user,
       pass,
     },
+    connectionTimeout: 5000,
+    greetingTimeout: 5000,
+    socketTimeout: 5000,
   });
 };
 
