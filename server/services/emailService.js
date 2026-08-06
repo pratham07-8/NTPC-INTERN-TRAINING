@@ -58,23 +58,29 @@ const sendViaMailtrap = async ({ to, subject, html, attachments = [] }) => {
 // Create standard Nodemailer transporter
 const createTransporter = () => {
   const host = process.env.SMTP_HOST ? process.env.SMTP_HOST.trim() : '';
-  const port = process.env.SMTP_PORT || 587;
+  const port = process.env.SMTP_PORT || 465;
   const user = process.env.SMTP_USER ? process.env.SMTP_USER.trim() : '';
   // Remove any spaces from Google App Password if pasted with spaces (e.g. "abcd efgh ijkl mnop")
   const pass = process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, '') : '';
 
   if (!user || !pass || user.includes('your-email')) {
+    console.log('[SMTP CONFIG WARNING] Missing or default SMTP_USER / SMTP_PASS in environment variables.');
     return null;
   }
 
-  // If host is Gmail or not set, use built-in 'gmail' service for optimum cloud compatibility
+  // Use explicit SSL Port 465 for Gmail for cloud server compatibility (Render/AWS)
   if (!host || host.includes('gmail')) {
     return nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true, // SSL
       auth: { user, pass },
-      connectionTimeout: 5000,
-      greetingTimeout: 5000,
-      socketTimeout: 5000,
+      tls: {
+        rejectUnauthorized: false,
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
     });
   }
 
@@ -86,9 +92,12 @@ const createTransporter = () => {
       user,
       pass,
     },
-    connectionTimeout: 5000,
-    greetingTimeout: 5000,
-    socketTimeout: 5000,
+    tls: {
+      rejectUnauthorized: false,
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
   });
 };
 
