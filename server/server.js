@@ -11,14 +11,14 @@ app.use(express.json());
 app.use('/auth', authRouter);
 app.use('/Review', requestFormRouter);
 
-app.get('/', (req, res) => {
-  res.send('Backend is live 🚀');
-});
-
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
     console.log("Server is running on PORT", PORT);
+});
+
+app.get('/', (req, res) => {
+    res.send('Backend is live 🚀');
 });
 
 
