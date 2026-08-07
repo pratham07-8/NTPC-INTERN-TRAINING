@@ -165,46 +165,41 @@ export const sendOTPEmail = async (toEmail, otp, name) => {
     </div>
   `;
 
-  // 1. Try Resend API first (if RESEND_API_KEY is present)
+  // 1. Try Nodemailer Gmail SMTP first (if SMTP credentials are provided and valid)
+  const transporter = createTransporter();
+  if (transporter) {
+    const fromEmail = process.env.SMTP_USER || process.env.SMTP_FROM || 'no-reply@ntpc.co.in';
+    try {
+      const info = await transporter.sendMail({
+        from: `"NTPC Intern Portal" <${fromEmail}>`,
+        to: toEmail,
+        subject,
+        html,
+      });
+      console.log(`[SMTP] Email successfully sent to ${toEmail}. MessageId: ${info.messageId}`);
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      console.error('[SMTP] Failed to send email via Gmail SMTP:', error);
+    }
+  }
+
+  // 2. Try Resend API next (if RESEND_API_KEY is present)
   const resendResult = await sendViaResend({ to: toEmail, subject, html });
   if (resendResult && resendResult.success) {
     return resendResult;
   }
 
-  // 2. Try Mailtrap API next (if MAILTRAP_TOKEN is present)
+  // 3. Try Mailtrap Sandbox API next (if MAILTRAP_TOKEN is present and SMTP failed/missing)
   const mailtrapResult = await sendViaMailtrap({ to: toEmail, subject, html });
   if (mailtrapResult && mailtrapResult.success) {
     return mailtrapResult;
   }
 
-  // 3. Fallback to Nodemailer Transporter
-  const transporter = createTransporter();
-  const fromEmail = process.env.SMTP_USER || process.env.SMTP_FROM || 'no-reply@ntpc.co.in';
-
-  if (!transporter) {
-    console.log('\n==================================================');
-    console.log(`[SMTP FALLBACK] Sending email to: ${toEmail}`);
-    console.log(`Verification OTP: ${otp}`);
-    console.log('==================================================\n');
-    return { success: true, fallback: true };
-  }
-
-  try {
-    const info = await transporter.sendMail({
-      from: fromEmail,
-      to: toEmail,
-      subject,
-      html,
-    });
-    console.log(`[SMTP] Email successfully sent to ${toEmail}. MessageId: ${info.messageId}`);
-    return { success: true, messageId: info.messageId };
-  } catch (error) {
-    console.error('[SMTP] Failed to send email:', error);
-    console.log('\n==================================================');
-    console.log(`[SMTP ERROR FALLBACK] Backup OTP for ${toEmail} is: ${otp}`);
-    console.log('==================================================\n');
-    return { success: false, error: error.message };
-  }
+  // 4. Console Fallback if all send methods are missing/failed
+  console.log('\n==================================================');
+  console.log(`[CONSOLE FALLBACK] Verification OTP for ${toEmail}: ${otp}`);
+  console.log('==================================================\n');
+  return { success: true, fallback: true };
 };
 
 /**
@@ -377,52 +372,48 @@ export const sendTrainingLetterEmail = async (toEmails, trainee, guide, pdfBuffe
     }
   ];
 
-  // 1. Try Resend API first if credentials are in .env
+  // 1. Try Nodemailer Transporter first (if SMTP credentials are provided and valid)
+  const transporter = createTransporter();
+  if (transporter) {
+    const fromEmail = process.env.SMTP_USER || process.env.SMTP_FROM || 'no-reply@ntpc.co.in';
+    try {
+      const info = await transporter.sendMail({
+        from: `"NTPC Intern Portal" <${fromEmail}>`,
+        to: Array.isArray(toEmails) ? toEmails.join(',') : toEmails,
+        subject,
+        html,
+        attachments: [
+          {
+            filename: attachmentFilename,
+            content: pdfBuffer
+          }
+        ]
+      });
+      console.log(`[SMTP] Training letter successfully sent to ${toEmails.join(', ')}. MessageId: ${info.messageId}`);
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      console.error('[SMTP] Failed to send training letter email via SMTP:', error);
+    }
+  }
+
+  // 2. Try Resend API next if credentials are in .env
   const resendResult = await sendViaResend({ to: toEmails, subject, html, attachments });
   if (resendResult && resendResult.success) {
     return resendResult;
   }
 
-  // 2. Try Mailtrap API next if credentials are in .env
+  // 3. Try Mailtrap API next if credentials are in .env
   const mailtrapResult = await sendViaMailtrap({ to: toEmails, subject, html, attachments });
   if (mailtrapResult && mailtrapResult.success) {
     return mailtrapResult;
   }
 
-  // 3. Fallback to Nodemailer Transporter
-  const transporter = createTransporter();
-  const fromEmail = process.env.SMTP_USER || process.env.SMTP_FROM || 'no-reply@ntpc.co.in';
-
-  if (!transporter) {
-    console.log('\n==================================================');
-    console.log(`[SMTP FALLBACK] Sending training letter to: ${toEmails.join(', ')}`);
-    console.log(`Attachment: ${attachmentFilename}`);
-    console.log('==================================================\n');
-    return { success: true, fallback: true };
-  }
-
-  try {
-    const info = await transporter.sendMail({
-      from: `"NTPC Intern Portal" <${fromEmail}>`,
-      to: Array.isArray(toEmails) ? toEmails.join(',') : toEmails,
-      subject,
-      html,
-      attachments: [
-        {
-          filename: attachmentFilename,
-          content: pdfBuffer
-        }
-      ]
-    });
-    console.log(`[SMTP] Training letter successfully sent to ${toEmails.join(', ')}. MessageId: ${info.messageId}`);
-    return { success: true, messageId: info.messageId };
-  } catch (error) {
-    console.error('[SMTP] Failed to send training letter email:', error);
-    console.log('\n==================================================');
-    console.log(`[SMTP ERROR FALLBACK] Backup: Letter generated for ${toEmails.join(', ')}`);
-    console.log('==================================================\n');
-    return { success: false, error: error.message };
-  }
+  // 4. Console Fallback if all send methods missing/failed
+  console.log('\n==================================================');
+  console.log(`[CONSOLE FALLBACK] Training letter generated for: ${Array.isArray(toEmails) ? toEmails.join(', ') : toEmails}`);
+  console.log(`Attachment: ${attachmentFilename}`);
+  console.log('==================================================\n');
+  return { success: true, fallback: true };
 };
 
 
