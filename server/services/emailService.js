@@ -100,9 +100,9 @@ const sendViaMailtrap = async ({ to, subject, html, attachments = [] }) => {
 };
 
 // Create standard Nodemailer transporter
-const createTransporter = () => {
+const createTransporter = (overridePort = null) => {
   const host = process.env.SMTP_HOST ? process.env.SMTP_HOST.trim() : '';
-  const port = process.env.SMTP_PORT || 465;
+  const port = overridePort || parseInt(process.env.SMTP_PORT) || 465;
   const user = process.env.SMTP_USER ? process.env.SMTP_USER.trim() : '';
   // Remove any spaces from Google App Password if pasted with spaces (e.g. "abcd efgh ijkl mnop")
   const pass = process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, '') : '';
@@ -112,30 +112,13 @@ const createTransporter = () => {
     return null;
   }
 
-  // Use explicit SSL Port 465 for Gmail for cloud server compatibility (Render/AWS)
-  if (!host || host.includes('gmail')) {
-    return nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true, // SSL
-      auth: { user, pass },
-      tls: {
-        rejectUnauthorized: false,
-      },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
-    });
-  }
+  const isSecure = port === 465;
 
   return nodemailer.createTransport({
-    host,
-    port: parseInt(port),
-    secure: parseInt(port) === 465,
-    auth: {
-      user,
-      pass,
-    },
+    host: (!host || host.includes('gmail')) ? 'smtp.gmail.com' : host,
+    port,
+    secure: isSecure, // true for 465, false for 587
+    auth: { user, pass },
     tls: {
       rejectUnauthorized: false,
     },
@@ -165,21 +148,39 @@ export const sendOTPEmail = async (toEmail, otp, name) => {
     </div>
   `;
 
-  // 1. Try Nodemailer Gmail SMTP first (if SMTP credentials are provided and valid)
-  const transporter = createTransporter();
-  if (transporter) {
+  // 1. Try Nodemailer Gmail SMTP on Port 465 (SSL)
+  const transporter465 = createTransporter(465);
+  if (transporter465) {
     const fromEmail = process.env.SMTP_USER || process.env.SMTP_FROM || 'no-reply@ntpc.co.in';
     try {
-      const info = await transporter.sendMail({
+      const info = await transporter465.sendMail({
         from: `"NTPC Intern Portal" <${fromEmail}>`,
         to: toEmail,
         subject,
         html,
       });
-      console.log(`[SMTP] Email successfully sent to ${toEmail}. MessageId: ${info.messageId}`);
+      console.log(`[SMTP 465] Email successfully sent to ${toEmail}. MessageId: ${info.messageId}`);
       return { success: true, messageId: info.messageId };
     } catch (error) {
-      console.error('[SMTP] Failed to send email via Gmail SMTP:', error);
+      console.error('[SMTP 465] Failed to send email via Gmail SSL Port 465:', error.message);
+    }
+  }
+
+  // 1b. Try Nodemailer Gmail SMTP on Port 587 (TLS/STARTTLS) as fallback for cloud firewalls
+  const transporter587 = createTransporter(587);
+  if (transporter587) {
+    const fromEmail = process.env.SMTP_USER || process.env.SMTP_FROM || 'no-reply@ntpc.co.in';
+    try {
+      const info = await transporter587.sendMail({
+        from: `"NTPC Intern Portal" <${fromEmail}>`,
+        to: toEmail,
+        subject,
+        html,
+      });
+      console.log(`[SMTP 587] Email successfully sent to ${toEmail}. MessageId: ${info.messageId}`);
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      console.error('[SMTP 587] Failed to send email via Gmail TLS Port 587:', error.message);
     }
   }
 
@@ -372,12 +373,12 @@ export const sendTrainingLetterEmail = async (toEmails, trainee, guide, pdfBuffe
     }
   ];
 
-  // 1. Try Nodemailer Transporter first (if SMTP credentials are provided and valid)
-  const transporter = createTransporter();
-  if (transporter) {
+  // 1. Try Nodemailer Transporter on Port 465 (SSL)
+  const transporter465 = createTransporter(465);
+  if (transporter465) {
     const fromEmail = process.env.SMTP_USER || process.env.SMTP_FROM || 'no-reply@ntpc.co.in';
     try {
-      const info = await transporter.sendMail({
+      const info = await transporter465.sendMail({
         from: `"NTPC Intern Portal" <${fromEmail}>`,
         to: Array.isArray(toEmails) ? toEmails.join(',') : toEmails,
         subject,
@@ -389,10 +390,34 @@ export const sendTrainingLetterEmail = async (toEmails, trainee, guide, pdfBuffe
           }
         ]
       });
-      console.log(`[SMTP] Training letter successfully sent to ${toEmails.join(', ')}. MessageId: ${info.messageId}`);
+      console.log(`[SMTP 465] Training letter successfully sent to ${toEmails.join(', ')}. MessageId: ${info.messageId}`);
       return { success: true, messageId: info.messageId };
     } catch (error) {
-      console.error('[SMTP] Failed to send training letter email via SMTP:', error);
+      console.error('[SMTP 465] Failed to send training letter email via SSL Port 465:', error.message);
+    }
+  }
+
+  // 1b. Try Nodemailer Transporter on Port 587 (TLS/STARTTLS) fallback
+  const transporter587 = createTransporter(587);
+  if (transporter587) {
+    const fromEmail = process.env.SMTP_USER || process.env.SMTP_FROM || 'no-reply@ntpc.co.in';
+    try {
+      const info = await transporter587.sendMail({
+        from: `"NTPC Intern Portal" <${fromEmail}>`,
+        to: Array.isArray(toEmails) ? toEmails.join(',') : toEmails,
+        subject,
+        html,
+        attachments: [
+          {
+            filename: attachmentFilename,
+            content: pdfBuffer
+          }
+        ]
+      });
+      console.log(`[SMTP 587] Training letter successfully sent to ${toEmails.join(', ')}. MessageId: ${info.messageId}`);
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      console.error('[SMTP 587] Failed to send training letter email via TLS Port 587:', error.message);
     }
   }
 
