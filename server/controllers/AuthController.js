@@ -68,8 +68,12 @@ export const signup = async (req, res) => {
       });
     }
 
-    // Send OTP Email asynchronously without blocking HTTP response
-    sendOTPEmail(email, otp, name).catch((err) => console.error('[EMAIL ERROR]', err));
+    // Send OTP Email synchronously so Node on cloud server completes sending before HTTP response ends
+    try {
+      await sendOTPEmail(email, otp, name);
+    } catch (err) {
+      console.error('[EMAIL ERROR]', err);
+    }
 
     return res.status(200).json({
       success: true,
