@@ -68,9 +68,12 @@ export const signup = async (req, res) => {
       });
     }
 
-    // Send OTP Email synchronously so Node on cloud server completes sending before HTTP response ends
+    // Send OTP Email with max 4s timeout so the UI never freezes
     try {
-      await sendOTPEmail(email, otp, name);
+      await Promise.race([
+        sendOTPEmail(email, otp, name),
+        new Promise((resolve) => setTimeout(() => resolve({ timeout: true }), 4000))
+      ]);
     } catch (err) {
       console.error('[EMAIL ERROR]', err);
     }

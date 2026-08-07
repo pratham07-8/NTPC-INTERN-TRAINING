@@ -115,7 +115,10 @@ const createTransporter = () => {
   if (!host || host.includes('gmail')) {
     return nodemailer.createTransport({
       service: 'gmail',
-      auth: { user, pass }
+      auth: { user, pass },
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 5000,
     });
   }
 
@@ -127,7 +130,10 @@ const createTransporter = () => {
     auth: { user, pass },
     tls: {
       rejectUnauthorized: false,
-    }
+    },
+    connectionTimeout: 5000,
+    greetingTimeout: 5000,
+    socketTimeout: 5000,
   });
 };
 
